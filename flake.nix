@@ -1,5 +1,5 @@
 {
-  description = "Custom SKK dictionaries overlay";
+  description = "Custom SKK dictionaries overlay with extended dictionary sources";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -12,44 +12,122 @@
     {
       # Overlay
       overlays.default = final: prev: {
-        # default.nixから外部ソースを取得
-        sources = final.callPackage ./pkgs/default.nix { };
+        # 外部ソースの定義
+        skkDictSources = final.callPackage ./pkgs/default.nix { };
 
-        # skk-dictsの定義
-        skk-dicts = prev.skk-dicts.overrideAttrs (oldAttrs: {
-          postInstall = (oldAttrs.postInstall or "") + ''
-            echo "Adding custom dictionaries..."
+        # skk-dictsの拡張版
+        skk-dicts-extended =
+          if prev ? skk-dicts then
+            # skk-dictsが存在する場合は拡張
+            prev.skk-dicts.overrideAttrs (oldAttrs: {
+              pname = "skk-dicts-extended";
+              version = "${oldAttrs.version or "unstable"}-custom";
 
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.L \
-              $out/share/skk/SKK-JISYO.L
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.assoc \
-              $out/share/skk/SKK-JISYO.assoc
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.edict2 \
-              $out/share/skk/SKK-JISYO.edict2
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.fullname \
-              $out/share/skk/SKK-JISYO.fullname
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.geo \
-              $out/share/skk/SKK-JISYO.geo
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.hukugougo \
-              $out/share/skk/SKK-JISYO.hukugougo
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.jinmei \
-              $out/share/skk/SKK-JISYO.jinmei
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.propernoun \
-              $out/share/skk/SKK-JISYO.propernoun
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.requested \
-              $out/share/skk/SKK-JISYO.requested
-            install -m644 ${final.sources.skk-dev}/SKK-JISYO.station \
-              $out/share/skk/SKK-JISYO.station
-            install -m644 ${final.sources.jawiki}/SKK-JISYO.jawiki \
-              $out/share/skk/SKK-JISYO.jawiki
-            install -m644 ${final.sources.stg73}/website.skk \
-              $out/share/skk/SKK-JISYO.website
-            install -m644 ${final.sources.stg73}/idiom.skk \
-              $out/share/skk/SKK-JISYO.idiom
-            install -m644 ${final.sources.stg73}/wrong.skk \
-              $out/share/skk/SKK-JISYO.wrong
-          '';
-        });
+              meta = (oldAttrs.meta or {}) // {
+                description = "SKK dictionaries with additional dictionaries from skk-dev, jawiki, and other sources";
+                longDescription = ''
+                  Extended SKK dictionaries including:
+                  - Standard SKK-JISYO dictionaries from skk-dev
+                  - Wikipedia-based jawiki dictionary
+                  - Website, idiom, and error correction dictionaries
+                '';
+                maintainers = (oldAttrs.meta.maintainers or []);
+              };
+
+              postInstall = (oldAttrs.postInstall or "") + ''
+                echo "Installing extended SKK dictionaries..."
+
+                # skk-devからの標準辞書
+                for dict in L assoc edict2 fullname geo hukugougo jinmei propernoun requested station; do
+                  src_file="${final.skkDictSources.skk-dev}/SKK-JISYO.$dict"
+                  if [ -f "$src_file" ]; then
+                    echo "  Installing SKK-JISYO.$dict"
+                    install -Dm644 "$src_file" "$out/share/skk/SKK-JISYO.$dict"
+                  else
+                    echo "  Warning: SKK-JISYO.$dict not found, skipping"
+                  fi
+                done
+
+                # jawiki辞書
+                if [ -f "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" ]; then
+                  echo "  Installing SKK-JISYO.jawiki"
+                  install -Dm644 "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" \
+                    "$out/share/skk/SKK-JISYO.jawiki"
+                fi
+
+                # stg73辞書
+                if [ -f "${final.skkDictSources.stg73}/website.skk" ]; then
+                  echo "  Installing SKK-JISYO.website"
+                  install -Dm644 "${final.skkDictSources.stg73}/website.skk" \
+                    "$out/share/skk/SKK-JISYO.website"
+                fi
+                if [ -f "${final.skkDictSources.stg73}/idiom.skk" ]; then
+                  echo "  Installing SKK-JISYO.idiom"
+                  install -Dm644 "${final.skkDictSources.stg73}/idiom.skk" \
+                    "$out/share/skk/SKK-JISYO.idiom"
+                fi
+                if [ -f "${final.skkDictSources.stg73}/wrong.skk" ]; then
+                  echo "  Installing SKK-JISYO.wrong"
+                  install -Dm644 "${final.skkDictSources.stg73}/wrong.skk" \
+                    "$out/share/skk/SKK-JISYO.wrong"
+                fi
+
+                echo "Extended SKK dictionaries installation complete"
+              '';
+            })
+          else
+            # skk-dictsが存在しない場合は独自にパッケージを作成
+            final.stdenv.mkDerivation {
+              pname = "skk-dicts-extended";
+              version = "unstable";
+
+              dontUnpack = true;
+
+              installPhase = ''
+                mkdir -p $out/share/skk
+
+                echo "Installing SKK dictionaries..."
+
+                # skk-devからの標準辞書
+                for dict in L assoc edict2 fullname geo hukugougo jinmei propernoun requested station; do
+                  src_file="${final.skkDictSources.skk-dev}/SKK-JISYO.$dict"
+                  if [ -f "$src_file" ]; then
+                    echo "  Installing SKK-JISYO.$dict"
+                    install -Dm644 "$src_file" "$out/share/skk/SKK-JISYO.$dict"
+                  fi
+                done
+
+                # jawiki辞書
+                if [ -f "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" ]; then
+                  echo "  Installing SKK-JISYO.jawiki"
+                  install -Dm644 "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" \
+                    "$out/share/skk/SKK-JISYO.jawiki"
+                fi
+
+                # stg73辞書
+                if [ -f "${final.skkDictSources.stg73}/website.skk" ]; then
+                  install -Dm644 "${final.skkDictSources.stg73}/website.skk" \
+                    "$out/share/skk/SKK-JISYO.website"
+                fi
+                if [ -f "${final.skkDictSources.stg73}/idiom.skk" ]; then
+                  install -Dm644 "${final.skkDictSources.stg73}/idiom.skk" \
+                    "$out/share/skk/SKK-JISYO.idiom"
+                fi
+                if [ -f "${final.skkDictSources.stg73}/wrong.skk" ]; then
+                  install -Dm644 "${final.skkDictSources.stg73}/wrong.skk" \
+                    "$out/share/skk/SKK-JISYO.wrong"
+                fi
+              '';
+
+              meta = with final.lib; {
+                description = "Extended SKK dictionaries collection";
+                license = licenses.gpl2Plus;
+                platforms = platforms.all;
+              };
+            };
+
+        # 互換性のためのエイリアス
+        skk-dicts = final.skk-dicts-extended;
       };
 
       # パッケージの出力
@@ -61,7 +139,35 @@
           };
         in
         {
-          default = pkgs.skk-dicts;
+          default = pkgs.skk-dicts-extended;
+          skk-dicts-extended = pkgs.skk-dicts-extended;
+        });
+
+      # NixOSモジュール
+      nixosModules.default = { config, lib, pkgs, ... }: {
+        nixpkgs.overlays = [ self.overlays.default ];
+      };
+
+      # 開発シェル
+      devShells = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            name = "skk-dicts-dev";
+            buildInputs = with pkgs; [
+              nix-prefetch-git
+              git
+            ];
+            shellHook = ''
+              echo "SKK Dictionaries Development Shell"
+              echo "Use 'nix-prefetch-git' to update source hashes"
+              echo ""
+              echo "Example:"
+              echo "  nix-prefetch-git https://github.com/skk-dev/dict"
+            '';
+          };
         });
     };
 }
