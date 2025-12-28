@@ -34,42 +34,44 @@
                 maintainers = (oldAttrs.meta.maintainers or []);
               };
 
+              nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [ final.nkf ];
+
               postInstall = (oldAttrs.postInstall or "") + ''
                 echo "Installing extended SKK dictionaries..."
 
-                # skk-devからの標準辞書
+                # skk-devからの標準辞書（EUC-JP）
                 for dict in L assoc edict2 fullname geo hukugougo jinmei propernoun requested station; do
                   src_file="${final.skkDictSources.skk-dev}/SKK-JISYO.$dict"
                   if [ -f "$src_file" ]; then
-                    echo "  Installing SKK-JISYO.$dict"
+                    echo "  Installing SKK-JISYO.$dict (EUC-JP)"
                     install -Dm644 "$src_file" "$out/share/skk/SKK-JISYO.$dict"
                   else
                     echo "  Warning: SKK-JISYO.$dict not found, skipping"
                   fi
                 done
 
-                # jawiki辞書
+                # jawiki辞書（UTF-8 -> EUC-JP変換）
                 if [ -f "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" ]; then
-                  echo "  Installing SKK-JISYO.jawiki"
-                  install -Dm644 "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" \
-                    "$out/share/skk/SKK-JISYO.jawiki"
+                  echo "  Installing SKK-JISYO.jawiki (converting UTF-8 to EUC-JP)"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" > "$out/share/skk/SKK-JISYO.jawiki"
+                  chmod 644 "$out/share/skk/SKK-JISYO.jawiki"
                 fi
 
-                # stg73辞書
+                # stg73辞書（UTF-8 -> EUC-JP変換）
                 if [ -f "${final.skkDictSources.stg73}/website.skk" ]; then
-                  echo "  Installing SKK-JISYO.website"
-                  install -Dm644 "${final.skkDictSources.stg73}/website.skk" \
-                    "$out/share/skk/SKK-JISYO.website"
+                  echo "  Installing SKK-JISYO.website (converting UTF-8 to EUC-JP)"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/website.skk" > "$out/share/skk/SKK-JISYO.website"
+                  chmod 644 "$out/share/skk/SKK-JISYO.website"
                 fi
                 if [ -f "${final.skkDictSources.stg73}/idiom.skk" ]; then
-                  echo "  Installing SKK-JISYO.idiom"
-                  install -Dm644 "${final.skkDictSources.stg73}/idiom.skk" \
-                    "$out/share/skk/SKK-JISYO.idiom"
+                  echo "  Installing SKK-JISYO.idiom (converting UTF-8 to EUC-JP)"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/idiom.skk" > "$out/share/skk/SKK-JISYO.idiom"
+                  chmod 644 "$out/share/skk/SKK-JISYO.idiom"
                 fi
                 if [ -f "${final.skkDictSources.stg73}/wrong.skk" ]; then
-                  echo "  Installing SKK-JISYO.wrong"
-                  install -Dm644 "${final.skkDictSources.stg73}/wrong.skk" \
-                    "$out/share/skk/SKK-JISYO.wrong"
+                  echo "  Installing SKK-JISYO.wrong (converting UTF-8 to EUC-JP)"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/wrong.skk" > "$out/share/skk/SKK-JISYO.wrong"
+                  chmod 644 "$out/share/skk/SKK-JISYO.wrong"
                 fi
 
                 echo "Extended SKK dictionaries installation complete"
@@ -83,39 +85,41 @@
 
               dontUnpack = true;
 
+              nativeBuildInputs = [ final.nkf ];
+
               installPhase = ''
                 mkdir -p $out/share/skk
 
                 echo "Installing SKK dictionaries..."
 
-                # skk-devからの標準辞書
+                # skk-devからの標準辞書（EUC-JP）
                 for dict in L assoc edict2 fullname geo hukugougo jinmei propernoun requested station; do
                   src_file="${final.skkDictSources.skk-dev}/SKK-JISYO.$dict"
                   if [ -f "$src_file" ]; then
-                    echo "  Installing SKK-JISYO.$dict"
+                    echo "  Installing SKK-JISYO.$dict (EUC-JP)"
                     install -Dm644 "$src_file" "$out/share/skk/SKK-JISYO.$dict"
                   fi
                 done
 
-                # jawiki辞書
+                # jawiki辞書（UTF-8 -> EUC-JP変換）
                 if [ -f "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" ]; then
-                  echo "  Installing SKK-JISYO.jawiki"
-                  install -Dm644 "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" \
-                    "$out/share/skk/SKK-JISYO.jawiki"
+                  echo "  Installing SKK-JISYO.jawiki (converting UTF-8 to EUC-JP)"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.jawiki}/SKK-JISYO.jawiki" > "$out/share/skk/SKK-JISYO.jawiki"
+                  chmod 644 "$out/share/skk/SKK-JISYO.jawiki"
                 fi
 
-                # stg73辞書
+                # stg73辞書（UTF-8 -> EUC-JP変換）
                 if [ -f "${final.skkDictSources.stg73}/website.skk" ]; then
-                  install -Dm644 "${final.skkDictSources.stg73}/website.skk" \
-                    "$out/share/skk/SKK-JISYO.website"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/website.skk" > "$out/share/skk/SKK-JISYO.website"
+                  chmod 644 "$out/share/skk/SKK-JISYO.website"
                 fi
                 if [ -f "${final.skkDictSources.stg73}/idiom.skk" ]; then
-                  install -Dm644 "${final.skkDictSources.stg73}/idiom.skk" \
-                    "$out/share/skk/SKK-JISYO.idiom"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/idiom.skk" > "$out/share/skk/SKK-JISYO.idiom"
+                  chmod 644 "$out/share/skk/SKK-JISYO.idiom"
                 fi
                 if [ -f "${final.skkDictSources.stg73}/wrong.skk" ]; then
-                  install -Dm644 "${final.skkDictSources.stg73}/wrong.skk" \
-                    "$out/share/skk/SKK-JISYO.wrong"
+                  ${final.nkf}/bin/nkf -e "${final.skkDictSources.stg73}/wrong.skk" > "$out/share/skk/SKK-JISYO.wrong"
+                  chmod 644 "$out/share/skk/SKK-JISYO.wrong"
                 fi
               '';
 
